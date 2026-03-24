@@ -1,21 +1,22 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   Pressable,
+  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
-const imgClose = 'https://www.figma.com/api/mcp/asset/a45ed7d2-1ad2-4413-9387-9dbfcfcb63be';
-const imgBook = 'https://www.figma.com/api/mcp/asset/312758ea-241a-4a27-b61d-3238a6f55247';
-const imgRepeat = 'https://www.figma.com/api/mcp/asset/6068895b-752b-4d37-9fce-01fcf5a68254';
-const imgTime = 'https://www.figma.com/api/mcp/asset/11f38d92-e065-4e74-9371-cf1ba0cbae79';
+const imgClose = 'https://www.figma.com/api/mcp/asset/bbfb5d9c-a73c-4c6d-8b25-b9912a0ebd24';
+const imgDelete = 'https://www.figma.com/api/mcp/asset/144acdb6-2a48-472d-9705-5df723fbfe12';
+const imgSave = 'https://www.figma.com/api/mcp/asset/1512d3f7-eb4f-47a3-ad86-c8626d73495b';
+const imgBook = 'https://www.figma.com/api/mcp/asset/241f2f91-eef2-407c-943e-9493f04debfc';
+const imgFire = 'https://www.figma.com/api/mcp/asset/211142e8-7fdc-4a5b-8491-63f91e77ef52';
+const imgReset = 'https://www.figma.com/api/mcp/asset/1e2017d8-59ac-4f5f-8c84-e1caa9efac56';
 
 type TrackType = 'Task' | 'Amount' | 'Time';
 type RepeatType = 'Daily' | 'Weekly' | 'Monthly';
@@ -31,36 +32,21 @@ type SegmentBarProps = {
 
 function SegmentBar({ value, onChange }: SegmentBarProps) {
   const items: TrackType[] = ['Task', 'Amount', 'Time'];
-  const showDetail = value !== 'Task';
 
   return (
-    <View style={[styles.segmentContainer, showDetail && styles.segmentContainerTall]}>
-      <View style={styles.segmentOuter}>
-        {items.map((item) => {
-          const isActive = value === item;
-          return (
-            <Pressable
-              key={item}
-              onPress={() => onChange(item)}
-              style={[styles.segmentPill, isActive && styles.segmentActive]}
-            >
-              <Text style={isActive ? styles.segmentTextActive : styles.segmentText}>{item}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-      {showDetail && (
-        <View style={styles.segmentDetail}>
-          <Image
-            source={{ uri: value === 'Amount' ? imgRepeat : imgTime }}
-            style={styles.segmentDetailIcon}
-            contentFit="contain"
-          />
-          <Text style={styles.segmentDetailText}>
-            {value === 'Amount' ? '1 times' : '15 minute'}
-          </Text>
-        </View>
-      )}
+    <View style={styles.segmentOuter}>
+      {items.map((item) => {
+        const isActive = value === item;
+        return (
+          <Pressable
+            key={item}
+            onPress={() => onChange(item)}
+            style={[styles.segmentPill, isActive && styles.segmentActive]}
+          >
+            <Text style={isActive ? styles.segmentTextActive : styles.segmentText}>{item}</Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -138,8 +124,7 @@ function RepeatCard({
   );
 }
 
-export default function MenuScreen() {
-  const router = useRouter();
+export default function EditScreen() {
   const [habitName, setHabitName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState(COLORS[2]);
@@ -147,7 +132,6 @@ export default function MenuScreen() {
   const [repeat, setRepeat] = useState<RepeatType>('Daily');
   const [days, setDays] = useState<string[]>(DAYS);
   const [monthDays, setMonthDays] = useState<string[]>(['1']);
-  const [isSaving, setIsSaving] = useState(false);
 
   const daySelectionEnabled = useMemo(() => repeat === 'Daily' || repeat === 'Weekly', [repeat]);
 
@@ -169,50 +153,22 @@ export default function MenuScreen() {
     );
   };
 
-  const handleCreate = async () => {
-    if (!habitName.trim() || isSaving) {
-      return;
-    }
-    setIsSaving(true);
-    try {
-      const payload = {
-        id: String(Date.now()),
-        name: habitName.trim(),
-        description: description.trim(),
-        color,
-        track,
-        repeat,
-        days: repeat === 'Monthly' ? [] : days,
-        monthDays: repeat === 'Monthly' ? monthDays : [],
-        streak: 0,
-        lastCompletedDate: null,
-        createdAt: new Date().toISOString(),
-      };
-      const existing = await AsyncStorage.getItem('habits');
-      const habits = existing ? JSON.parse(existing) : [];
-      habits.push(payload);
-      await AsyncStorage.setItem('habits', JSON.stringify(habits));
-      router.replace('/');
-    } catch (error) {
-      console.error('Failed to save habit', error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
         <Link href="/" asChild>
           <Image source={{ uri: imgClose }} style={styles.closeIcon} contentFit="contain" />
         </Link>
-        <Pressable
-          style={[styles.createBadge, !habitName.trim() && styles.createBadgeDisabled]}
-          onPress={handleCreate}
-        >
-          <Text style={styles.createText}>Create</Text>
-        </Pressable>
+        <View style={styles.actionRow}>
+          <View style={styles.deleteButton}>
+            <Image source={{ uri: imgDelete }} style={styles.actionIcon} contentFit="contain" />
+          </View>
+          <View style={styles.saveButton}>
+            <Image source={{ uri: imgSave }} style={styles.actionIcon} contentFit="contain" />
+          </View>
+        </View>
       </View>
+
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={[styles.habitIconWrap, { backgroundColor: color }]}>
           <Image source={{ uri: imgBook }} style={styles.habitIcon} contentFit="contain" />
@@ -223,7 +179,6 @@ export default function MenuScreen() {
           style={styles.habitName}
           placeholder="Habit Name"
           placeholderTextColor="#1F1F1F"
-          textAlign="center"
         />
         <TextInput
           value={description}
@@ -231,7 +186,6 @@ export default function MenuScreen() {
           style={styles.habitDescription}
           placeholder="Add Description"
           placeholderTextColor="#5E636A"
-          textAlign="center"
         />
 
         <View style={styles.colorRow}>
@@ -252,7 +206,7 @@ export default function MenuScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Track</Text>
-        <View style={[styles.segmentCard, track !== 'Task' && styles.segmentCardTall]}>
+        <View style={styles.segmentCard}>
           <SegmentBar value={track} onChange={setTrack} />
         </View>
 
@@ -265,6 +219,19 @@ export default function MenuScreen() {
           monthDays={monthDays}
           onToggleMonthDay={toggleMonthDay}
         />
+
+        <Text style={styles.sectionTitle}>Streak</Text>
+        <View style={styles.streakCard}>
+          <View style={styles.streakRow}>
+            <View style={styles.streakInfo}>
+              <Image source={{ uri: imgFire }} style={styles.fireIcon} contentFit="contain" />
+              <Text style={styles.streakText}>7 Days</Text>
+            </View>
+            <View style={styles.resetButton}>
+              <Image source={{ uri: imgReset }} style={styles.resetIcon} contentFit="contain" />
+            </View>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -290,19 +257,30 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
   },
-  createBadge: {
-    backgroundColor: '#FBBC05',
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  deleteButton: {
+    width: 40,
+    height: 40,
     borderRadius: 24,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: '#EA4335',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  createBadgeDisabled: {
-    opacity: 0.5,
+  saveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 24,
+    backgroundColor: '#34A853',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  createText: {
-    fontSize: 20,
-    color: '#FFFFFF',
-    fontWeight: '600',
+  actionIcon: {
+    width: 30,
+    height: 30,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -311,7 +289,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   habitIconWrap: {
-    backgroundColor: '#FBBC05',
     borderRadius: 16,
     padding: 10,
     borderWidth: 4,
@@ -379,17 +356,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  segmentCardTall: {
-    paddingVertical: 20,
-  },
-  segmentContainer: {
-    height: 40,
-    justifyContent: 'center',
-  },
-  segmentContainerTall: {
-    height: 100,
-    justifyContent: 'space-between',
-  },
   segmentOuter: {
     backgroundColor: '#5E636A',
     borderRadius: 24,
@@ -412,25 +378,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   segmentTextActive: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  segmentDetail: {
-    backgroundColor: '#34A853',
-    borderRadius: 24,
-    paddingHorizontal: 24,
-    height: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  segmentDetailIcon: {
-    width: 30,
-    height: 30,
-  },
-  segmentDetailText: {
     fontSize: 16,
     color: '#FFFFFF',
     fontWeight: '600',
@@ -531,5 +478,48 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  streakCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 10,
+    paddingVertical: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 1, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  streakRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  streakInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  fireIcon: {
+    width: 30,
+    height: 30,
+  },
+  streakText: {
+    fontSize: 16,
+    color: '#5E636A',
+    fontWeight: '600',
+  },
+  resetButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 24,
+    backgroundColor: '#FBBC05',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resetIcon: {
+    width: 30,
+    height: 30,
   },
 });

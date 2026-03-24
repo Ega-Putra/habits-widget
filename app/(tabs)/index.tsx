@@ -1,16 +1,14 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import {
-  SafeAreaView,
-  SafeAreaProvider,
-  SafeAreaInsetsContext,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { useCallback, useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 
 
-const imgIcRoundCheck = 'https://www.figma.com/api/mcp/asset/7f809075-d53f-4d4f-b2a3-3264fc7fbe73';
-const imgIcRoundCheck1 = 'https://www.figma.com/api/mcp/asset/588c5126-f96e-4ebd-a252-660896a248b7';
+const imgIcRoundCheck = 'https://www.figma.com/api/mcp/asset/0a93e900-ed15-4b90-95ca-a17ad7566760';
+const imgIcRoundCheck1 = 'https://www.figma.com/api/mcp/asset/8179fa83-3c2b-42a3-812b-d4f33ea427a7';
 const imgCiMenuAlt05 = 'https://www.figma.com/api/mcp/asset/b4a67355-7108-4e61-8136-ad3a303de090';
 const imgIcRoundAdd = 'https://www.figma.com/api/mcp/asset/f92c6af4-082d-4cbc-8416-4af3262f02d9';
 const imgGroup = 'https://www.figma.com/api/mcp/asset/e1e22605-c2a8-4c5b-b91e-26adb31c023c';
@@ -20,23 +18,99 @@ const imgGroup3 = 'https://www.figma.com/api/mcp/asset/07b81dbe-c999-4176-a005-8
 const imgStreamlineSleepRemix =
   'https://www.figma.com/api/mcp/asset/e357bdd7-d972-4a2e-9f59-0ec8c05ec859';
 
-type CheckCircleProps = {
-  done?: boolean;
+const HABIT_ICONS = [imgGroup1, imgGroup3, imgStreamlineSleepRemix];
+
+type Habit = {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  track: 'Task' | 'Amount' | 'Time';
+  repeat: 'Daily' | 'Weekly' | 'Monthly';
+  days: string[];
+  monthDays: string[];
+  streak: number;
+  lastCompletedDate: string | null;
+  createdAt: string;
 };
 
-function CheckCircle({ done }: CheckCircleProps) {
+type CheckCircleProps = {
+  done?: boolean;
+  onPress?: () => void;
+};
+
+function CheckCircle({ done, onPress }: CheckCircleProps) {
+  const Container = onPress ? Pressable : View;
   return (
-    <View style={[styles.checkCircle, done && styles.checkCircleDone]}>
+    <Container style={[styles.checkCircle, done && styles.checkCircleDone]} onPress={onPress}>
       <Image
         source={{ uri: done ? imgIcRoundCheck1 : imgIcRoundCheck }}
         style={styles.checkIcon}
         contentFit="contain"
       />
-    </View>
+    </Container>
   );
 }
 
 export default function HomeScreen() {
+  const [habits, setHabits] = useState<Habit[]>([]);
+
+  const todayKey = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = `${now.getMonth() + 1}`.padStart(2, '0');
+    const day = `${now.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const loadHabits = useCallback(async () => {
+    try {
+      const stored = await AsyncStorage.getItem('habits');
+      const parsed = stored ? JSON.parse(stored) : [];
+      const normalized = Array.isArray(parsed)
+        ? parsed.map((habit) => ({
+            ...habit,
+            streak: Number.isFinite(Number(habit.streak)) ? Number(habit.streak) : 0,
+          }))
+        : [];
+      setHabits(normalized);
+    } catch (error) {
+      console.error('Failed to load habits', error);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHabits();
+    }, [loadHabits]),
+  );
+
+  const persistHabits = useCallback(async (nextHabits: Habit[]) => {
+    setHabits(nextHabits);
+    await AsyncStorage.setItem('habits', JSON.stringify(nextHabits));
+  }, []);
+
+  const toggleDone = useCallback(
+    async (habitId: string) => {
+      const nextHabits = habits.map((habit) => {
+        if (habit.id !== habitId) {
+          return habit;
+        }
+        const isDoneToday = habit.lastCompletedDate === todayKey;
+        if (isDoneToday) {
+          return habit;
+        }
+        return {
+          ...habit,
+          lastCompletedDate: todayKey,
+          streak: (Number.isFinite(Number(habit.streak)) ? Number(habit.streak) : 0) + 1,
+        };
+      });
+      await persistHabits(nextHabits);
+    },
+    [habits, persistHabits, todayKey],
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
@@ -58,7 +132,7 @@ export default function HomeScreen() {
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.countCard}>
-          <Text style={styles.countNumber}>3</Text>
+          <Text style={styles.countNumber}>{habits.length}</Text>
           <View style={styles.countIconWrap}>
             <Image source={{ uri: imgGroup }} style={styles.seedIcon} contentFit="contain" />
             <Text style={styles.countLabel}>
@@ -69,53 +143,27 @@ export default function HomeScreen() {
 
         <Text style={styles.sectionTitle}>Habits List</Text>
 
-        <View style={styles.habitCard}>
-          <View style={[styles.habitIconWrap, styles.habitIconYellow]}>
-            <Image source={{ uri: imgGroup1 }} style={styles.habitIcon} contentFit="contain" />
-          </View>
-          <View style={styles.habitInfo}>
-            <Text style={styles.habitTitle}>Read 20 Minutes</Text>
-            <View style={styles.habitStreakRow}>
-              <View style={styles.streakInfo}>
-                <Image source={{ uri: imgGroup2 }} style={styles.fireIcon} contentFit="contain" />
-                <Text style={styles.streakText}>7 Days</Text>
+        {habits.map((habit, index) => {
+          const icon = HABIT_ICONS[index % HABIT_ICONS.length];
+          const isDoneToday = habit.lastCompletedDate === todayKey;
+          return (
+            <View key={habit.id} style={styles.habitCard}>
+              <View style={[styles.habitIconWrap, { backgroundColor: habit.color }]}>
+                <Image source={{ uri: icon }} style={styles.habitIcon} contentFit="contain" />
               </View>
-              <CheckCircle />
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.habitCard}>
-          <View style={[styles.habitIconWrap, styles.habitIconGreen]}>
-            <Image source={{ uri: imgGroup3 }} style={styles.habitIcon} contentFit="contain" />
-          </View>
-          <View style={styles.habitInfo}>
-            <Text style={styles.habitTitle}>Workout 1 Hour</Text>
-            <View style={styles.habitStreakRow}>
-              <View style={styles.streakInfo}>
-                <Image source={{ uri: imgGroup2 }} style={styles.fireIcon} contentFit="contain" />
-                <Text style={styles.streakText}>3 Days</Text>
+              <View style={styles.habitInfo}>
+                <Text style={styles.habitTitle}>{habit.name}</Text>
+                <View style={styles.habitStreakRow}>
+                  <View style={styles.streakInfo}>
+                    <Image source={{ uri: imgGroup2 }} style={styles.fireIcon} contentFit="contain" />
+                    <Text style={styles.streakText}>{habit.streak ?? 0} Days</Text>
+                  </View>
+                  <CheckCircle done={isDoneToday} onPress={() => toggleDone(habit.id)} />
+                </View>
               </View>
-              <CheckCircle />
             </View>
-          </View>
-        </View>
-
-        <View style={styles.habitCard}>
-          <View style={[styles.habitIconWrap, styles.habitIconBlue]}>
-            <Image source={{ uri: imgStreamlineSleepRemix }} style={styles.habitIcon} contentFit="contain" />
-          </View>
-          <View style={styles.habitInfo}>
-            <Text style={styles.habitTitle}>Sleep 8 Hours</Text>
-            <View style={styles.habitStreakRow}>
-              <View style={styles.streakInfo}>
-                <Image source={{ uri: imgGroup2 }} style={styles.fireIcon} contentFit="contain" />
-                <Text style={styles.streakText}>30 Days</Text>
-              </View>
-              <CheckCircle done />
-            </View>
-          </View>
-        </View>
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );
@@ -226,9 +274,6 @@ const styles = StyleSheet.create({
     borderWidth: 4,
     borderColor: 'rgba(94,99,106,0.1)',
   },
-  habitIconYellow: { backgroundColor: '#FBBC05' },
-  habitIconGreen: { backgroundColor: '#34A853' },
-  habitIconBlue: { backgroundColor: '#4285F4' },
   habitIcon: {
     width: 60,
     height: 60,
