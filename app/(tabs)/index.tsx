@@ -148,19 +148,23 @@ export default function HomeScreen() {
           const isDoneToday = habit.lastCompletedDate === todayKey;
           return (
             <View key={habit.id} style={styles.habitCard}>
-              <View style={[styles.habitIconWrap, { backgroundColor: habit.color }]}>
-                <Image source={{ uri: icon }} style={styles.habitIcon} contentFit="contain" />
-              </View>
-              <View style={styles.habitInfo}>
-                <Text style={styles.habitTitle}>{habit.name}</Text>
-                <View style={styles.habitStreakRow}>
-                  <View style={styles.streakInfo}>
-                    <Image source={{ uri: imgGroup2 }} style={styles.fireIcon} contentFit="contain" />
-                    <Text style={styles.streakText}>{habit.streak ?? 0} Days</Text>
+              <Link href={{ pathname: '/edit/[id]', params: { id: habit.id } }} asChild>
+                <Pressable style={styles.habitContent}>
+                  <View style={[styles.habitIconWrap, { backgroundColor: habit.color }]}>
+                    <Image source={{ uri: icon }} style={styles.habitIcon} contentFit="contain" />
                   </View>
-                  <CheckCircle done={isDoneToday} onPress={() => toggleDone(habit.id)} />
-                </View>
-              </View>
+                  <View style={styles.habitInfo}>
+                    <Text style={styles.habitTitle}>{habit.name}</Text>
+                    <View style={styles.habitStreakRow}>
+                      <View style={styles.streakInfo}>
+                        <Image source={{ uri: imgGroup2 }} style={styles.fireIcon} contentFit="contain" />
+                        <Text style={styles.streakText}>{habit.streak ?? 0} Days</Text>
+                      </View>
+                    </View>
+                  </View>
+                </Pressable>
+              </Link>
+              <CheckCircle done={isDoneToday} onPress={() => toggleDone(habit.id)} />
             </View>
           );
         })}
@@ -267,6 +271,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  habitContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   habitIconWrap: {
     borderRadius: 16,

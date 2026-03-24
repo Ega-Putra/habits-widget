@@ -1,6 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
-import { Link } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   SafeAreaView,
@@ -125,6 +126,8 @@ function RepeatCard({
 }
 
 export default function EditScreen() {
+  const router = useRouter();
+  const { id } = useLocalSearchParams<{ id?: string }>();
   const [habitName, setHabitName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState(COLORS[2]);
@@ -132,6 +135,9 @@ export default function EditScreen() {
   const [repeat, setRepeat] = useState<RepeatType>('Daily');
   const [days, setDays] = useState<string[]>(DAYS);
   const [monthDays, setMonthDays] = useState<string[]>(['1']);
+  const [streak, setStreak] = useState(0);
+  const [lastCompletedDate, setLastCompletedDate] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const daySelectionEnabled = useMemo(() => repeat === 'Daily' || repeat === 'Weekly', [repeat]);
 
@@ -153,6 +159,101 @@ export default function EditScreen() {
     );
   };
 
+  const loadHabit = useCallback(async () => {
+    if (!id || isLoaded) {
+      return;
+    }
+    try {
+      const stored = await AsyncStorage.getItem('habits');
+      const habits = stored ? JSON.parse(stored) : [];
+      const target = Array.isArray(habits) ? habits.find((item) => item.id === id) : null;
+      if (target) {
+        setHabitName(target.name ?? '');
+        setDescription(target.description ?? '');
+        setColor(target.color ?? COLORS[2]);
+        setTrack((target.track as TrackType) ?? 'Task');
+        setRepeat((target.repeat as RepeatType) ?? 'Daily');
+        setDays(Array.isArray(target.days) && target.days.length ? target.days : DAYS);
+        setMonthDays(
+          Array.isArray(target.monthDays) && target.monthDays.length ? target.monthDays : ['1'],
+        );
+        setStreak(Number.isFinite(Number(target.streak)) ? Number(target.streak) : 0);
+        setLastCompletedDate(target.lastCompletedDate ?? null);
+      }
+      setIsLoaded(true);
+    } catch (error) {
+      console.error('Failed to load habit', error);
+    }
+  }, [id, isLoaded]);
+
+  useEffect(() => {
+    loadHabit();
+  }, [loadHabit]);
+
+  const handleSave = useCallback(async () => {
+    if (!id || !habitName.trim()) {
+      return;
+    }
+    try {
+      const stored = await AsyncStorage.getItem('habits');
+      const habits = stored ? JSON.parse(stored) : [];
+      const next = Array.isArray(habits)
+        ? habits.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  name: habitName.trim(),
+                  description: description.trim(),
+                  color,
+                  track,
+                  repeat,
+                  days: repeat === 'Monthly' ? [] : days,
+                  monthDays: repeat === 'Monthly' ? monthDays : [],
+                  streak,
+                  lastCompletedDate,
+                }
+              : item,
+          )
+        : [];
+      await AsyncStorage.setItem('habits', JSON.stringify(next));
+      router.replace('/');
+    } catch (error) {
+      console.error('Failed to save habit', error);
+    }
+  }, [
+    id,
+    habitName,
+    description,
+    color,
+    track,
+    repeat,
+    days,
+    monthDays,
+    streak,
+    lastCompletedDate,
+    router,
+  ]);
+
+  const handleDelete = useCallback(async () => {
+    if (!id) {
+      return;
+    }
+    try {
+      const stored = await AsyncStorage.getItem('habits');
+      const habits = stored ? JSON.parse(stored) : [];
+      const next = Array.isArray(habits) ? habits.filter((item) => item.id !== id) : [];
+      await AsyncStorage.setItem('habits', JSON.stringify(next));
+      router.replace('/');
+    } catch (error) {
+      console.error('Failed to delete habit', error);
+    }
+  }, [id, router]);
+
+  const handleResetStreak = () => {
+    setStreak(0);
+    setLastCompletedDate(null);
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
@@ -160,12 +261,12 @@ export default function EditScreen() {
           <Image source={{ uri: imgClose }} style={styles.closeIcon} contentFit="contain" />
         </Link>
         <View style={styles.actionRow}>
-          <View style={styles.deleteButton}>
+          <Pressable style={styles.deleteButton} onPress={handleDelete}>
             <Image source={{ uri: imgDelete }} style={styles.actionIcon} contentFit="contain" />
-          </View>
-          <View style={styles.saveButton}>
+          </Pressable>
+          <Pressable style={styles.saveButton} onPress={handleSave}>
             <Image source={{ uri: imgSave }} style={styles.actionIcon} contentFit="contain" />
-          </View>
+          </Pressable>
         </View>
       </View>
 
@@ -179,6 +280,7 @@ export default function EditScreen() {
           style={styles.habitName}
           placeholder="Habit Name"
           placeholderTextColor="#1F1F1F"
+          textAlign="center"
         />
         <TextInput
           value={description}
@@ -186,6 +288,7 @@ export default function EditScreen() {
           style={styles.habitDescription}
           placeholder="Add Description"
           placeholderTextColor="#5E636A"
+          textAlign="center"
         />
 
         <View style={styles.colorRow}>
@@ -225,11 +328,11 @@ export default function EditScreen() {
           <View style={styles.streakRow}>
             <View style={styles.streakInfo}>
               <Image source={{ uri: imgFire }} style={styles.fireIcon} contentFit="contain" />
-              <Text style={styles.streakText}>7 Days</Text>
+              <Text style={styles.streakText}>{streak} Days</Text>
             </View>
-            <View style={styles.resetButton}>
+            <Pressable style={styles.resetButton} onPress={handleResetStreak}>
               <Image source={{ uri: imgReset }} style={styles.resetIcon} contentFit="contain" />
-            </View>
+            </Pressable>
           </View>
         </View>
       </ScrollView>
