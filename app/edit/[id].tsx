@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -12,12 +12,6 @@ import {
   View,
 } from 'react-native';
 
-const imgClose = 'https://www.figma.com/api/mcp/asset/bbfb5d9c-a73c-4c6d-8b25-b9912a0ebd24';
-const imgDelete = 'https://www.figma.com/api/mcp/asset/144acdb6-2a48-472d-9705-5df723fbfe12';
-const imgSave = 'https://www.figma.com/api/mcp/asset/1512d3f7-eb4f-47a3-ad86-c8626d73495b';
-const imgBook = 'https://www.figma.com/api/mcp/asset/241f2f91-eef2-407c-943e-9493f04debfc';
-const imgFire = 'https://www.figma.com/api/mcp/asset/211142e8-7fdc-4a5b-8491-63f91e77ef52';
-const imgReset = 'https://www.figma.com/api/mcp/asset/1e2017d8-59ac-4f5f-8c84-e1caa9efac56';
 
 type TrackType = 'Task' | 'Amount' | 'Time';
 type RepeatType = 'Daily' | 'Weekly' | 'Monthly';
@@ -127,7 +121,9 @@ function RepeatCard({
 
 export default function EditScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const params = useLocalSearchParams<{ id?: string | string[]; emoji?: string | string[] }>();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const emoji = Array.isArray(params.emoji) ? params.emoji[0] : params.emoji;
   const [habitName, setHabitName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState(COLORS[2]);
@@ -138,6 +134,7 @@ export default function EditScreen() {
   const [streak, setStreak] = useState(0);
   const [lastCompletedDate, setLastCompletedDate] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
 
   const daySelectionEnabled = useMemo(() => repeat === 'Daily' || repeat === 'Weekly', [repeat]);
 
@@ -179,6 +176,9 @@ export default function EditScreen() {
         );
         setStreak(Number.isFinite(Number(target.streak)) ? Number(target.streak) : 0);
         setLastCompletedDate(target.lastCompletedDate ?? null);
+        if (!(typeof emoji === 'string' && emoji.length)) {
+          setSelectedEmoji(target.emoji ?? null);
+        }
       }
       setIsLoaded(true);
     } catch (error) {
@@ -189,6 +189,16 @@ export default function EditScreen() {
   useEffect(() => {
     loadHabit();
   }, [loadHabit]);
+
+  useEffect(() => {
+    if (typeof emoji === 'string' && emoji.length) {
+      setSelectedEmoji(emoji);
+    }
+  }, [emoji]);
+
+  useEffect(() => {
+    setIsLoaded(false);
+  }, [id]);
 
   const handleSave = useCallback(async () => {
     if (!id || !habitName.trim()) {
@@ -204,11 +214,12 @@ export default function EditScreen() {
               ...item,
               name: habitName.trim(),
               description: description.trim(),
-              color,
-              track,
-              repeat,
-              days: repeat === 'Monthly' ? [] : days,
-              monthDays: repeat === 'Monthly' ? monthDays : [],
+                  color,
+                  emoji: selectedEmoji,
+                  track,
+                  repeat,
+                  days: repeat === 'Monthly' ? [] : days,
+                  monthDays: repeat === 'Monthly' ? monthDays : [],
               streak,
               lastCompletedDate,
             }
@@ -258,22 +269,38 @@ export default function EditScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
         <Link href="/" asChild>
-          <Image source={{ uri: imgClose }} style={styles.closeIcon} contentFit="contain" />
+          <Ionicons name="close-outline" size={32} color="#1F1F1F" />
         </Link>
         <View style={styles.actionRow}>
           <Pressable style={styles.deleteButton} onPress={handleDelete}>
-            <Image source={{ uri: imgDelete }} style={styles.actionIcon} contentFit="contain" />
+            <Ionicons name="trash-outline" size={22} color="#FFFFFF" />
           </Pressable>
           <Pressable style={styles.saveButton} onPress={handleSave}>
-            <Image source={{ uri: imgSave }} style={styles.actionIcon} contentFit="contain" />
+            <Ionicons name="save-outline" size={22} color="#FFFFFF" />
           </Pressable>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={[styles.habitIconWrap, { backgroundColor: color }]}>
-          <Image source={{ uri: imgBook }} style={styles.habitIcon} contentFit="contain" />
-        </View>
+        <Pressable
+          style={[styles.habitIconWrap, { backgroundColor: color }]}
+          onPress={() =>
+            router.push({
+              pathname: '/emoji-menu',
+              params: { returnTo: '/edit/[id]', returnId: String(id), current: selectedEmoji ?? '' },
+            })
+          }
+        >
+          {selectedEmoji ? (
+            <Ionicons
+              name={selectedEmoji as keyof typeof Ionicons.glyphMap}
+              size={44}
+              color="#1F1F1F"
+            />
+          ) : (
+            <Ionicons name="book-outline" size={44} color="#1F1F1F" />
+          )}
+        </Pressable>
         <TextInput
           value={habitName}
           onChangeText={setHabitName}
@@ -327,11 +354,11 @@ export default function EditScreen() {
         <View style={styles.streakCard}>
           <View style={styles.streakRow}>
             <View style={styles.streakInfo}>
-              <Image source={{ uri: imgFire }} style={styles.fireIcon} contentFit="contain" />
+              <Ionicons name="flame-outline" size={22} color="#FBBC05" />
               <Text style={styles.streakText}>{streak} Days</Text>
             </View>
             <Pressable style={styles.resetButton} onPress={handleResetStreak}>
-              <Image source={{ uri: imgReset }} style={styles.resetIcon} contentFit="contain" />
+              <Ionicons name="refresh-outline" size={20} color="#FFFFFF" />
             </Pressable>
           </View>
         </View>
@@ -356,10 +383,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  closeIcon: {
-    width: 40,
-    height: 40,
-  },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -381,10 +404,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  actionIcon: {
-    width: 30,
-    height: 30,
-  },
   scrollContent: {
     paddingHorizontal: 20,
     paddingVertical: 40,
@@ -396,10 +415,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderWidth: 4,
     borderColor: 'rgba(94,99,106,0.1)',
-  },
-  habitIcon: {
-    width: 60,
-    height: 60,
   },
   habitName: {
     fontSize: 24,
@@ -604,10 +619,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  fireIcon: {
-    width: 30,
-    height: 30,
-  },
   streakText: {
     fontSize: 16,
     color: '#5E636A',
@@ -620,9 +631,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#FBBC05',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  resetIcon: {
-    width: 30,
-    height: 30,
   },
 });

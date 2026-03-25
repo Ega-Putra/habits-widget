@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Image } from 'expo-image';
-import { Link, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -12,10 +12,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const imgClose = 'https://www.figma.com/api/mcp/asset/a45ed7d2-1ad2-4413-9387-9dbfcfcb63be';
-const imgBook = 'https://www.figma.com/api/mcp/asset/312758ea-241a-4a27-b61d-3238a6f55247';
-const imgRepeat = 'https://www.figma.com/api/mcp/asset/6068895b-752b-4d37-9fce-01fcf5a68254';
-const imgTime = 'https://www.figma.com/api/mcp/asset/11f38d92-e065-4e74-9371-cf1ba0cbae79';
 
 type TrackType = 'Task' | 'Amount' | 'Time';
 type RepeatType = 'Daily' | 'Weekly' | 'Monthly';
@@ -51,10 +47,10 @@ function SegmentBar({ value, onChange }: SegmentBarProps) {
       </View>
       {showDetail && (
         <View style={styles.segmentDetail}>
-          <Image
-            source={{ uri: value === 'Amount' ? imgRepeat : imgTime }}
-            style={styles.segmentDetailIcon}
-            contentFit="contain"
+          <Ionicons
+            name={value === 'Amount' ? 'repeat-outline' : 'time-outline'}
+            size={20}
+            color="#FFFFFF"
           />
           <Text style={styles.segmentDetailText}>
             {value === 'Amount' ? '1 times' : '15 minute'}
@@ -140,6 +136,7 @@ function RepeatCard({
 
 export default function MenuScreen() {
   const router = useRouter();
+  const { emoji } = useLocalSearchParams<{ emoji?: string }>();
   const [habitName, setHabitName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState(COLORS[2]);
@@ -148,6 +145,7 @@ export default function MenuScreen() {
   const [days, setDays] = useState<string[]>(DAYS);
   const [monthDays, setMonthDays] = useState<string[]>(['1']);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
 
   const daySelectionEnabled = useMemo(() => repeat === 'Daily' || repeat === 'Weekly', [repeat]);
 
@@ -169,6 +167,12 @@ export default function MenuScreen() {
     );
   };
 
+  useEffect(() => {
+    if (typeof emoji === 'string' && emoji.length) {
+      setSelectedEmoji(emoji);
+    }
+  }, [emoji]);
+
   const handleCreate = async () => {
     if (!habitName.trim() || isSaving) {
       return;
@@ -180,6 +184,7 @@ export default function MenuScreen() {
         name: habitName.trim(),
         description: description.trim(),
         color,
+        emoji: selectedEmoji,
         track,
         repeat,
         days: repeat === 'Monthly' ? [] : days,
@@ -204,7 +209,7 @@ export default function MenuScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
         <Link href="/" asChild>
-          <Image source={{ uri: imgClose }} style={styles.closeIcon} contentFit="contain" />
+          <Ionicons name="close-outline" size={32} color="#1F1F1F" />
         </Link>
         <Pressable
           style={[styles.createBadge, !habitName.trim() && styles.createBadgeDisabled]}
@@ -214,9 +219,25 @@ export default function MenuScreen() {
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={[styles.habitIconWrap, { backgroundColor: color }]}>
-          <Image source={{ uri: imgBook }} style={styles.habitIcon} contentFit="contain" />
-        </View>
+        <Pressable
+          style={[styles.habitIconWrap, { backgroundColor: color }]}
+          onPress={() =>
+            router.push({
+              pathname: '/emoji-menu',
+              params: { returnTo: '/menu', current: selectedEmoji ?? '' },
+            })
+          }
+        >
+          {selectedEmoji ? (
+            <Ionicons
+              name={selectedEmoji as keyof typeof Ionicons.glyphMap}
+              size={44}
+              color="#1F1F1F"
+            />
+          ) : (
+            <Ionicons name="book-outline" size={44} color="#1F1F1F" />
+          )}
+        </Pressable>
         <TextInput
           value={habitName}
           onChangeText={setHabitName}
@@ -286,10 +307,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  closeIcon: {
-    width: 40,
-    height: 40,
-  },
   createBadge: {
     backgroundColor: '#FBBC05',
     borderRadius: 24,
@@ -316,10 +333,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderWidth: 4,
     borderColor: 'rgba(94,99,106,0.1)',
-  },
-  habitIcon: {
-    width: 60,
-    height: 60,
   },
   habitName: {
     fontSize: 24,
@@ -425,10 +438,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-  },
-  segmentDetailIcon: {
-    width: 30,
-    height: 30,
   },
   segmentDetailText: {
     fontSize: 16,

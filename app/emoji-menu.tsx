@@ -1,5 +1,4 @@
-import { Image } from 'expo-image';
-import { Link } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   Pressable,
@@ -12,15 +11,19 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const imgClose = 'https://www.figma.com/api/mcp/asset/5dd7b6f6-0a2f-489a-ad6f-97d96d1cf294';
-const imgDone = 'https://www.figma.com/api/mcp/asset/a8bbb640-13fc-418b-9c4e-685f9618d603';
-const imgBook = 'https://www.figma.com/api/mcp/asset/3de55898-78eb-4be8-b310-b54dff4368db';
-const imgSearch = 'https://www.figma.com/api/mcp/asset/9bb54734-1f7e-4fb1-a16f-232af6ca3138';
 
 
 export default function EmojiMenuScreen() {
+  const router = useRouter();
+  const { returnTo, returnId, current } = useLocalSearchParams<{
+    returnTo?: string;
+    returnId?: string;
+    current?: string;
+  }>();
   const [query, setQuery] = useState('');
-  const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
+  const [selectedIcon, setSelectedIcon] = useState<string | null>(
+    typeof current === 'string' && current.length ? current : null,
+  );
 
   const emojiIcons = useMemo(
     () => Object.keys(Ionicons.glyphMap).filter((name) => name.endsWith('-outline')),
@@ -39,11 +42,25 @@ export default function EmojiMenuScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
         <Link href="/" asChild>
-          <Image source={{ uri: imgClose }} style={styles.closeIcon} contentFit="contain" />
+          <Ionicons name="close-outline" size={32} color="#1F1F1F" />
         </Link>
-        <View style={styles.doneButton}>
-          <Image source={{ uri: imgDone }} style={styles.doneIcon} contentFit="contain" />
-        </View>
+        <Pressable
+          style={styles.doneButton}
+          onPress={() => {
+            if (returnTo && selectedIcon) {
+              router.replace({
+                pathname: returnTo,
+                params: returnId
+                  ? { id: returnId, emoji: selectedIcon }
+                  : { emoji: selectedIcon },
+              });
+            } else {
+              router.replace('/');
+            }
+          }}
+        >
+          <Ionicons name="checkmark-outline" size={22} color="#FFFFFF" />
+        </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -51,7 +68,7 @@ export default function EmojiMenuScreen() {
           {selectedIcon ? (
             <Ionicons name={selectedIcon} size={44} color="#1F1F1F" />
           ) : (
-            <Image source={{ uri: imgBook }} style={styles.habitIcon} contentFit="contain" />
+            <Ionicons name="book-outline" size={44} color="#1F1F1F" />
           )}
         </View>
 
@@ -64,7 +81,7 @@ export default function EmojiMenuScreen() {
               placeholderTextColor="#5E636A"
               style={styles.searchInput}
             />
-            <Image source={{ uri: imgSearch }} style={styles.searchIcon} contentFit="contain" />
+            <Ionicons name="search-outline" size={16} color="#5E636A" />
           </View>
 
           <ScrollView contentContainerStyle={styles.gridContainer} showsVerticalScrollIndicator={false}>
@@ -104,10 +121,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  closeIcon: {
-    width: 40,
-    height: 40,
-  },
   doneButton: {
     width: 40,
     height: 40,
@@ -115,10 +128,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#34A853',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  doneIcon: {
-    width: 30,
-    height: 30,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -132,10 +141,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderWidth: 4,
     borderColor: 'rgba(94,99,106,0.1)',
-  },
-  habitIcon: {
-    width: 60,
-    height: 60,
   },
   emojiContainer: {
     width: '100%',
@@ -167,10 +172,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#5E636A',
   },
-  searchIcon: {
-    width: 20,
-    height: 20,
-  },
   gridContainer: {
     maxHeight: 520,
     backgroundColor: '#FFFFFF',
@@ -200,9 +201,5 @@ const styles = StyleSheet.create({
   emojiItemSelected: {
     borderWidth: 2,
     borderColor: '#34A853',
-  },
-  emojiIcon: {
-    width: 30,
-    height: 30,
   },
 });

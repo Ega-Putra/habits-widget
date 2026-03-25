@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
@@ -6,25 +7,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 
-
-const imgIcRoundCheck = 'https://www.figma.com/api/mcp/asset/0a93e900-ed15-4b90-95ca-a17ad7566760';
-const imgIcRoundCheck1 = 'https://www.figma.com/api/mcp/asset/8179fa83-3c2b-42a3-812b-d4f33ea427a7';
-const imgCiMenuAlt05 = 'https://www.figma.com/api/mcp/asset/b4a67355-7108-4e61-8136-ad3a303de090';
-const imgIcRoundAdd = 'https://www.figma.com/api/mcp/asset/f92c6af4-082d-4cbc-8416-4af3262f02d9';
-const imgGroup = 'https://www.figma.com/api/mcp/asset/e1e22605-c2a8-4c5b-b91e-26adb31c023c';
-const imgGroup1 = 'https://www.figma.com/api/mcp/asset/161c9ab3-2755-4968-8a68-321dc0094db0';
-const imgGroup2 = 'https://www.figma.com/api/mcp/asset/a6914fb5-f1b9-4102-ba48-e85e28d0363b';
-const imgGroup3 = 'https://www.figma.com/api/mcp/asset/07b81dbe-c999-4176-a005-8fa59acb7ddf';
-const imgStreamlineSleepRemix =
-  'https://www.figma.com/api/mcp/asset/e357bdd7-d972-4a2e-9f59-0ec8c05ec859';
-
-const HABIT_ICONS = [imgGroup1, imgGroup3, imgStreamlineSleepRemix];
-
 type Habit = {
   id: string;
   name: string;
   description?: string;
   color: string;
+  emoji?: string | null;
   track: 'Task' | 'Amount' | 'Time';
   repeat: 'Daily' | 'Weekly' | 'Monthly';
   days: string[];
@@ -43,10 +31,10 @@ function CheckCircle({ done, onPress }: CheckCircleProps) {
   const Container = onPress ? Pressable : View;
   return (
     <Container style={[styles.checkCircle, done && styles.checkCircleDone]} onPress={onPress}>
-      <Image
-        source={{ uri: done ? imgIcRoundCheck1 : imgIcRoundCheck }}
-        style={styles.checkIcon}
-        contentFit="contain"
+      <Ionicons
+        name={done ? 'checkmark-outline' : 'checkmark-outline'}
+        size={18}
+        color={done ? '#FFFFFF' : '#5E636A'}
       />
     </Container>
   );
@@ -69,9 +57,9 @@ export default function HomeScreen() {
       const parsed = stored ? JSON.parse(stored) : [];
       const normalized = Array.isArray(parsed)
         ? parsed.map((habit) => ({
-            ...habit,
-            streak: Number.isFinite(Number(habit.streak)) ? Number(habit.streak) : 0,
-          }))
+          ...habit,
+          streak: Number.isFinite(Number(habit.streak)) ? Number(habit.streak) : 0,
+        }))
         : [];
       setHabits(normalized);
     } catch (error) {
@@ -114,7 +102,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
-        <Image source={{ uri: imgCiMenuAlt05 }} style={styles.menuIcon} contentFit="contain" />
+        <Ionicons name="menu-outline" size={34} color="#5E636A" />
         <Text style={styles.brandText}>
           <Text style={styles.brandBlue}>H</Text>
           <Text style={styles.brandRed}>a</Text>
@@ -126,7 +114,7 @@ export default function HomeScreen() {
         </Text>
         <Link href="/menu" asChild>
           <View style={styles.addButton}>
-            <Image source={{ uri: imgIcRoundAdd }} style={styles.addIcon} contentFit="contain" />
+            <Ionicons name="add-outline" size={24} color="#FFFFFF" />
           </View>
         </Link>
       </View>
@@ -134,7 +122,7 @@ export default function HomeScreen() {
         <View style={styles.countCard}>
           <Text style={styles.countNumber}>{habits.length}</Text>
           <View style={styles.countIconWrap}>
-            <Image source={{ uri: imgGroup }} style={styles.seedIcon} contentFit="contain" />
+            <FontAwesome5 name="seedling" size={60} color="green" />
             <Text style={styles.countLabel}>
               Habits{'\n'}Count
             </Text>
@@ -143,21 +131,28 @@ export default function HomeScreen() {
 
         <Text style={styles.sectionTitle}>Habits List</Text>
 
-        {habits.map((habit, index) => {
-          const icon = HABIT_ICONS[index % HABIT_ICONS.length];
+        {habits.map((habit) => {
           const isDoneToday = habit.lastCompletedDate === todayKey;
           return (
             <View key={habit.id} style={styles.habitCard}>
               <Link href={{ pathname: '/edit/[id]', params: { id: habit.id } }} asChild>
                 <Pressable style={styles.habitContent}>
                   <View style={[styles.habitIconWrap, { backgroundColor: habit.color }]}>
-                    <Image source={{ uri: icon }} style={styles.habitIcon} contentFit="contain" />
+                    {habit.emoji ? (
+                      <Ionicons
+                        name={habit.emoji as keyof typeof Ionicons.glyphMap}
+                        size={36}
+                        color="#1F1F1F"
+                      />
+                    ) : (
+                      <Ionicons name="book-outline" size={36} color="#1F1F1F" />
+                    )}
                   </View>
                   <View style={styles.habitInfo}>
                     <Text style={styles.habitTitle}>{habit.name}</Text>
                     <View style={styles.habitStreakRow}>
                       <View style={styles.streakInfo}>
-                        <Image source={{ uri: imgGroup2 }} style={styles.fireIcon} contentFit="contain" />
+                        <Ionicons name="flame-outline" size={20} color="#FBBC05" />
                         <Text style={styles.streakText}>{habit.streak ?? 0} Days</Text>
                       </View>
                     </View>
@@ -189,10 +184,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  menuIcon: {
-    width: 60,
-    height: 60,
-  },
   brandText: {
     fontSize: 24,
     fontWeight: '600',
@@ -210,10 +201,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FBBC05',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  addIcon: {
-    width: 40,
-    height: 40,
   },
   scrollContent: {
     paddingHorizontal: 20,
@@ -243,10 +230,6 @@ const styles = StyleSheet.create({
   countIconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  seedIcon: {
-    width: 60,
-    height: 60,
   },
   countLabel: {
     fontSize: 10,
@@ -307,10 +290,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  fireIcon: {
-    width: 30,
-    height: 30,
-  },
   streakText: {
     fontSize: 16,
     color: '#5E636A',
@@ -328,9 +307,5 @@ const styles = StyleSheet.create({
   },
   checkCircleDone: {
     backgroundColor: '#34A853',
-  },
-  checkIcon: {
-    width: 20,
-    height: 20,
   },
 });
