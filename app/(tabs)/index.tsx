@@ -1,6 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -122,7 +121,7 @@ export default function HomeScreen() {
         <View style={styles.countCard}>
           <Text style={styles.countNumber}>{habits.length}</Text>
           <View style={styles.countIconWrap}>
-            <FontAwesome5 name="seedling" size={60} color="green" />
+            <FontAwesome5 name="seedling" size={44} color="green" />
             <Text style={styles.countLabel}>
               Habits{'\n'}Count
             </Text>

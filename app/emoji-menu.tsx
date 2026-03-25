@@ -49,7 +49,7 @@ export default function EmojiMenuScreen() {
           onPress={() => {
             if (returnTo && selectedIcon) {
               router.replace({
-                pathname: returnTo,
+                pathname: returnTo as any,
                 params: returnId
                   ? { id: returnId, emoji: selectedIcon }
                   : { emoji: selectedIcon },
@@ -66,7 +66,7 @@ export default function EmojiMenuScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.habitIconWrap}>
           {selectedIcon ? (
-            <Ionicons name={selectedIcon} size={44} color="#1F1F1F" />
+            <Ionicons name={selectedIcon as keyof typeof Ionicons.glyphMap} size={44} color="#1F1F1F" />
           ) : (
             <Ionicons name="book-outline" size={44} color="#1F1F1F" />
           )}
@@ -93,11 +93,10 @@ export default function EmojiMenuScreen() {
                   style={[styles.emojiItem, isSelected && styles.emojiItemSelected]}
                   onPress={() => setSelectedIcon(emoji)}
                 >
-                  <Ionicons name={emoji} size={26} color="#1F1F1F" />
+                  <Ionicons name={emoji as keyof typeof Ionicons.glyphMap} size={26} color="#1F1F1F" />
                 </Pressable>
               );
             })}
-            ))}
           </ScrollView>
         </View>
       </ScrollView>
