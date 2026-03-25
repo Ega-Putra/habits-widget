@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   segmentCard: {
-    width: 320,
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     paddingHorizontal: 10,
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   repeatCard: {
-    width: 320,
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     paddingHorizontal: 10,

@@ -199,21 +199,21 @@ export default function EditScreen() {
       const habits = stored ? JSON.parse(stored) : [];
       const next = Array.isArray(habits)
         ? habits.map((item) =>
-            item.id === id
-              ? {
-                  ...item,
-                  name: habitName.trim(),
-                  description: description.trim(),
-                  color,
-                  track,
-                  repeat,
-                  days: repeat === 'Monthly' ? [] : days,
-                  monthDays: repeat === 'Monthly' ? monthDays : [],
-                  streak,
-                  lastCompletedDate,
-                }
-              : item,
-          )
+          item.id === id
+            ? {
+              ...item,
+              name: habitName.trim(),
+              description: description.trim(),
+              color,
+              track,
+              repeat,
+              days: repeat === 'Monthly' ? [] : days,
+              monthDays: repeat === 'Monthly' ? monthDays : [],
+              streak,
+              lastCompletedDate,
+            }
+            : item,
+        )
         : [];
       await AsyncStorage.setItem('habits', JSON.stringify(next));
       router.replace('/');
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   segmentCard: {
-    width: 320,
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     paddingHorizontal: 10,
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   repeatCard: {
-    width: 320,
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     paddingHorizontal: 10,
