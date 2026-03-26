@@ -23,11 +23,17 @@ const MONTH_DAYS = Array.from({ length: 31 }, (_, index) => `${index + 1}`);
 type SegmentBarProps = {
   value: TrackType;
   onChange: (value: TrackType) => void;
+  amount: number;
+  time: number;
+  onAdjust: (type: 'Amount' | 'Time', delta: number) => void;
 };
 
-function SegmentBar({ value, onChange }: SegmentBarProps) {
+function SegmentBar({ value, onChange, amount, time, onAdjust }: SegmentBarProps) {
   const items: TrackType[] = ['Task', 'Amount', 'Time'];
   const showDetail = value !== 'Task';
+  const isAmount = value === 'Amount';
+  const currentValue = isAmount ? amount : time;
+  const unit = isAmount ? 'times' : 'minute';
 
   return (
     <View style={[styles.segmentContainer, showDetail && styles.segmentContainerTall]}>
@@ -47,14 +53,38 @@ function SegmentBar({ value, onChange }: SegmentBarProps) {
       </View>
       {showDetail && (
         <View style={styles.segmentDetail}>
-          <Ionicons
-            name={value === 'Amount' ? 'repeat-outline' : 'time-outline'}
-            size={20}
-            color="#FFFFFF"
-          />
+          <View style={styles.adjustRow}>
+            <Pressable
+              style={styles.adjustButton}
+              onPress={() => onAdjust(isAmount ? 'Amount' : 'Time', -5)}
+            >
+              <Text style={styles.adjustText}>-5</Text>
+            </Pressable>
+            <Pressable
+              style={styles.adjustButton}
+              onPress={() => onAdjust(isAmount ? 'Amount' : 'Time', -1)}
+            >
+              <Text style={styles.adjustText}>-1</Text>
+            </Pressable>
+          </View >
+          <Ionicons name={isAmount ? 'repeat-outline' : 'time-outline'} size={18} color="#FFFFFF" />
           <Text style={styles.segmentDetailText}>
-            {value === 'Amount' ? '1 times' : '15 minute'}
+            {currentValue} {unit}
           </Text>
+          <View style={styles.adjustRow}>
+            <Pressable
+              style={styles.adjustButton}
+              onPress={() => onAdjust(isAmount ? 'Amount' : 'Time', 1)}
+            >
+              <Text style={styles.adjustText}>+1</Text>
+            </Pressable>
+            <Pressable
+              style={styles.adjustButton}
+              onPress={() => onAdjust(isAmount ? 'Amount' : 'Time', 5)}
+            >
+              <Text style={styles.adjustText}>+5</Text>
+            </Pressable>
+          </View>
         </View>
       )}
     </View>
@@ -146,6 +176,8 @@ export default function MenuScreen() {
   const [monthDays, setMonthDays] = useState<string[]>(['1']);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const [amountValue, setAmountValue] = useState(1);
+  const [timeValue, setTimeValue] = useState(0);
 
   const daySelectionEnabled = useMemo(() => repeat === 'Daily' || repeat === 'Weekly', [repeat]);
 
@@ -165,6 +197,14 @@ export default function MenuScreen() {
     setMonthDays((prev) =>
       prev.includes(day) ? prev.filter((item) => item !== day) : [...prev, day],
     );
+  };
+
+  const adjustValue = (type: 'Amount' | 'Time', delta: number) => {
+    if (type === 'Amount') {
+      setAmountValue((prev) => Math.max(0, prev + delta));
+      return;
+    }
+    setTimeValue((prev) => Math.max(0, prev + delta));
   };
 
   useEffect(() => {
@@ -274,7 +314,13 @@ export default function MenuScreen() {
 
         <Text style={styles.sectionTitle}>Track</Text>
         <View style={[styles.segmentCard, track !== 'Task' && styles.segmentCardTall]}>
-          <SegmentBar value={track} onChange={setTrack} />
+          <SegmentBar
+            value={track}
+            onChange={setTrack}
+            amount={amountValue}
+            time={timeValue}
+            onAdjust={adjustValue}
+          />
         </View>
 
         <Text style={styles.sectionTitle}>Repeat</Text>
@@ -382,7 +428,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
     paddingVertical: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -405,9 +451,11 @@ const styles = StyleSheet.create({
   },
   segmentOuter: {
     backgroundColor: '#5E636A',
+    width: '100%',
     borderRadius: 24,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   segmentPill: {
     width: 100,
@@ -432,11 +480,12 @@ const styles = StyleSheet.create({
   segmentDetail: {
     backgroundColor: '#34A853',
     borderRadius: 24,
-    paddingHorizontal: 24,
+    paddingHorizontal: 10,
     height: 40,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     gap: 10,
   },
   segmentDetailText: {
@@ -444,11 +493,28 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
+  adjustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  adjustButton: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.6)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  adjustText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
   repeatCard: {
     width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
     paddingVertical: 20,
     gap: 20,
     alignItems: 'center',
@@ -463,9 +529,11 @@ const styles = StyleSheet.create({
   },
   repeatTabs: {
     backgroundColor: '#5E636A',
+    width: '100%',
     borderRadius: 24,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   repeatTab: {
     width: 100,
@@ -518,6 +586,8 @@ const styles = StyleSheet.create({
   },
   repeatDayPillActive: {
     backgroundColor: '#34A853',
+    borderWidth: 1,
+    borderColor: 'white',
   },
   repeatDayText: {
     fontSize: 10,
@@ -535,6 +605,8 @@ const styles = StyleSheet.create({
   },
   repeatGridPillActive: {
     backgroundColor: '#34A853',
+    borderWidth: 1,
+    borderColor: 'white',
   },
   repeatGridText: {
     fontSize: 10,

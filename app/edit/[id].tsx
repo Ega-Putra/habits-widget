@@ -4,13 +4,13 @@ import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 
 type TrackType = 'Task' | 'Amount' | 'Time';
@@ -23,25 +23,74 @@ const MONTH_DAYS = Array.from({ length: 31 }, (_, index) => `${index + 1}`);
 type SegmentBarProps = {
   value: TrackType;
   onChange: (value: TrackType) => void;
+  amount: number;
+  time: number;
+  onAdjust: (type: 'Amount' | 'Time', delta: number) => void;
 };
 
-function SegmentBar({ value, onChange }: SegmentBarProps) {
+function SegmentBar({ value, onChange, amount, time, onAdjust }: SegmentBarProps) {
   const items: TrackType[] = ['Task', 'Amount', 'Time'];
+  const showDetail = value !== 'Task';
+  const isAmount = value === 'Amount';
+  const currentValue = isAmount ? amount : time;
+  const unit = isAmount ? 'times' : 'minute';
 
   return (
-    <View style={styles.segmentOuter}>
-      {items.map((item) => {
-        const isActive = value === item;
-        return (
-          <Pressable
-            key={item}
-            onPress={() => onChange(item)}
-            style={[styles.segmentPill, isActive && styles.segmentActive]}
-          >
-            <Text style={isActive ? styles.segmentTextActive : styles.segmentText}>{item}</Text>
-          </Pressable>
-        );
-      })}
+    <View style={[styles.segmentContainer, showDetail && styles.segmentContainerTall]}>
+      <View style={styles.segmentOuter}>
+        {items.map((item) => {
+          const isActive = value === item;
+          return (
+            <Pressable
+              key={item}
+              onPress={() => onChange(item)}
+              style={[styles.segmentPill, isActive && styles.segmentActive]}
+            >
+              <Text style={isActive ? styles.segmentTextActive : styles.segmentText}>{item}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {showDetail && (
+        <View style={styles.segmentDetail}>
+          <View style={styles.adjustRow}>
+            <Pressable
+              style={styles.adjustButton}
+              onPress={() => onAdjust(isAmount ? 'Amount' : 'Time', -5)}
+            >
+              <Text style={styles.adjustText}>-5</Text>
+            </Pressable>
+            <Pressable
+              style={styles.adjustButton}
+              onPress={() => onAdjust(isAmount ? 'Amount' : 'Time', -1)}
+            >
+              <Text style={styles.adjustText}>-1</Text>
+            </Pressable>
+          </View>
+          <Ionicons
+            name={isAmount ? 'repeat-outline' : 'time-outline'}
+            size={18}
+            color="#FFFFFF"
+          />
+          <Text style={styles.segmentDetailText}>
+            {currentValue} {unit}
+          </Text>
+          <View style={styles.adjustRow}>
+            <Pressable
+              style={styles.adjustButton}
+              onPress={() => onAdjust(isAmount ? 'Amount' : 'Time', 1)}
+            >
+              <Text style={styles.adjustText}>+1</Text>
+            </Pressable>
+            <Pressable
+              style={styles.adjustButton}
+              onPress={() => onAdjust(isAmount ? 'Amount' : 'Time', 5)}
+            >
+              <Text style={styles.adjustText}>+5</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -135,6 +184,8 @@ export default function EditScreen() {
   const [lastCompletedDate, setLastCompletedDate] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
+  const [amountValue, setAmountValue] = useState(1);
+  const [timeValue, setTimeValue] = useState(15);
 
   const daySelectionEnabled = useMemo(() => repeat === 'Daily' || repeat === 'Weekly', [repeat]);
 
@@ -179,6 +230,8 @@ export default function EditScreen() {
         if (!(typeof emoji === 'string' && emoji.length)) {
           setSelectedEmoji(target.emoji ?? null);
         }
+        setAmountValue(Number.isFinite(Number(target.amount)) ? Number(target.amount) : 1);
+        setTimeValue(Number.isFinite(Number(target.time)) ? Number(target.time) : 15);
       }
       setIsLoaded(true);
     } catch (error) {
@@ -214,12 +267,14 @@ export default function EditScreen() {
               ...item,
               name: habitName.trim(),
               description: description.trim(),
-                  color,
-                  emoji: selectedEmoji,
-                  track,
-                  repeat,
-                  days: repeat === 'Monthly' ? [] : days,
-                  monthDays: repeat === 'Monthly' ? monthDays : [],
+              color,
+              emoji: selectedEmoji,
+              track,
+              repeat,
+              amount: amountValue,
+              time: timeValue,
+              days: repeat === 'Monthly' ? [] : days,
+              monthDays: repeat === 'Monthly' ? monthDays : [],
               streak,
               lastCompletedDate,
             }
@@ -238,6 +293,8 @@ export default function EditScreen() {
     color,
     track,
     repeat,
+    amountValue,
+    timeValue,
     days,
     monthDays,
     streak,
@@ -263,6 +320,14 @@ export default function EditScreen() {
   const handleResetStreak = () => {
     setStreak(0);
     setLastCompletedDate(null);
+  };
+
+  const adjustValue = (type: 'Amount' | 'Time', delta: number) => {
+    if (type === 'Amount') {
+      setAmountValue((prev) => Math.max(0, prev + delta));
+      return;
+    }
+    setTimeValue((prev) => Math.max(0, prev + delta));
   };
 
   return (
@@ -336,8 +401,14 @@ export default function EditScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Track</Text>
-        <View style={styles.segmentCard}>
-          <SegmentBar value={track} onChange={setTrack} />
+        <View style={[styles.segmentCard, track !== 'Task' && styles.segmentCardTall]}>
+          <SegmentBar
+            value={track}
+            onChange={setTrack}
+            amount={amountValue}
+            time={timeValue}
+            onAdjust={adjustValue}
+          />
         </View>
 
         <Text style={styles.sectionTitle}>Repeat</Text>
@@ -464,7 +535,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
     paddingVertical: 20,
     alignItems: 'center',
     justifyContent: 'center',
@@ -474,11 +545,25 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  segmentCardTall: {
+    paddingVertical: 20,
+    minHeight: 140,
+  },
+  segmentContainer: {
+    height: 40,
+    justifyContent: 'center',
+  },
+  segmentContainerTall: {
+    height: 100,
+    justifyContent: 'space-between',
+  },
   segmentOuter: {
     backgroundColor: '#5E636A',
+    width: '100%',
     borderRadius: 24,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   segmentPill: {
     width: 100,
@@ -500,11 +585,44 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '600',
   },
+  segmentDetail: {
+    backgroundColor: '#34A853',
+    borderRadius: 24,
+    paddingHorizontal: 10,
+    height: 40,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  segmentDetailText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  adjustRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  adjustButton: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.6)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  adjustText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
   repeatCard: {
     width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
     paddingVertical: 20,
     gap: 20,
     alignItems: 'center',
@@ -519,9 +637,11 @@ const styles = StyleSheet.create({
   },
   repeatTabs: {
     backgroundColor: '#5E636A',
+    width: '100%',
     borderRadius: 24,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   repeatTab: {
     width: 100,
@@ -574,6 +694,8 @@ const styles = StyleSheet.create({
   },
   repeatDayPillActive: {
     backgroundColor: '#34A853',
+    borderWidth: 1,
+    borderColor: 'white',
   },
   repeatDayText: {
     fontSize: 10,
@@ -591,6 +713,8 @@ const styles = StyleSheet.create({
   },
   repeatGridPillActive: {
     backgroundColor: '#34A853',
+    borderWidth: 1,
+    borderColor: 'white',
   },
   repeatGridText: {
     fontSize: 10,

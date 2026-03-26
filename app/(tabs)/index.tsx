@@ -13,12 +13,63 @@ type Habit = {
   color: string;
   emoji?: string | null;
   track: 'Task' | 'Amount' | 'Time';
+  amount?: number;
+  time?: number;
   repeat: 'Daily' | 'Weekly' | 'Monthly';
   days: string[];
   monthDays: string[];
   streak: number;
   lastCompletedDate: string | null;
   createdAt: string;
+};
+
+const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+const toDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateKey = (key: string) => {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const isDueDate = (habit: Habit, date: Date) => {
+  if (habit.repeat === 'Monthly') {
+    const day = `${date.getDate()}`;
+    return Array.isArray(habit.monthDays) && habit.monthDays.includes(day);
+  }
+  const weekday = WEEKDAYS[date.getDay()];
+  const days = Array.isArray(habit.days) ? habit.days : [];
+  if (days.length === 0) {
+    return true;
+  }
+  return days.includes(weekday);
+};
+
+const hasMissedDue = (habit: Habit, lastCompletedDate: string | null, todayKey: string) => {
+  if (!lastCompletedDate) {
+    return false;
+  }
+  const lastDate = parseDateKey(lastCompletedDate);
+  const today = parseDateKey(todayKey);
+  if (lastDate >= today) {
+    return false;
+  }
+  const cursor = new Date(lastDate);
+  cursor.setDate(cursor.getDate() + 1);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  while (cursor <= yesterday) {
+    if (isDueDate(habit, cursor)) {
+      return true;
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return false;
 };
 
 type CheckCircleProps = {
@@ -29,11 +80,18 @@ type CheckCircleProps = {
 function CheckCircle({ done, onPress }: CheckCircleProps) {
   const Container = onPress ? Pressable : View;
   return (
-    <Container style={[styles.checkCircle, done && styles.checkCircleDone]} onPress={onPress}>
+    <Container
+      style={[
+        styles.checkCircle,
+        done && styles.checkCircleDone,
+        !onPress && !done && styles.checkCircleDisabled,
+      ]}
+      onPress={onPress}
+    >
       <Ionicons
         name={done ? 'checkmark-outline' : 'checkmark-outline'}
         size={18}
-        color={done ? '#FFFFFF' : '#5E636A'}
+        color={done ? '#FFFFFF' : !onPress ? '#C0C4C8' : '#5E636A'}
       />
     </Container>
   );
@@ -42,29 +100,34 @@ function CheckCircle({ done, onPress }: CheckCircleProps) {
 export default function HomeScreen() {
   const [habits, setHabits] = useState<Habit[]>([]);
 
-  const todayKey = useMemo(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = `${now.getMonth() + 1}`.padStart(2, '0');
-    const day = `${now.getDate()}`.padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }, []);
+  const todayKey = useMemo(() => toDateKey(new Date()), []);
 
   const loadHabits = useCallback(async () => {
     try {
       const stored = await AsyncStorage.getItem('habits');
       const parsed = stored ? JSON.parse(stored) : [];
       const normalized = Array.isArray(parsed)
-        ? parsed.map((habit) => ({
-          ...habit,
-          streak: Number.isFinite(Number(habit.streak)) ? Number(habit.streak) : 0,
-        }))
+        ? parsed.map((habit) => {
+          const next = {
+            ...habit,
+            streak: Number.isFinite(Number(habit.streak)) ? Number(habit.streak) : 0,
+          };
+          if (hasMissedDue(next, next.lastCompletedDate, todayKey)) {
+            return {
+              ...next,
+              streak: 0,
+              lastCompletedDate: null,
+            };
+          }
+          return next;
+        })
         : [];
       setHabits(normalized);
+      await AsyncStorage.setItem('habits', JSON.stringify(normalized));
     } catch (error) {
       console.error('Failed to load habits', error);
     }
-  }, []);
+  }, [todayKey]);
 
   useFocusEffect(
     useCallback(() => {
@@ -79,8 +142,12 @@ export default function HomeScreen() {
 
   const toggleDone = useCallback(
     async (habitId: string) => {
+      const todayDate = parseDateKey(todayKey);
       const nextHabits = habits.map((habit) => {
         if (habit.id !== habitId) {
+          return habit;
+        }
+        if (!isDueDate(habit, todayDate)) {
           return habit;
         }
         const isDoneToday = habit.lastCompletedDate === todayKey;
@@ -101,7 +168,9 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
-        <Ionicons name="menu-outline" size={34} color="#5E636A" />
+        <Link href="/option" asChild>
+          <Ionicons name="menu-outline" size={34} color="#5E636A" />
+        </Link>
         <Text style={styles.brandText}>
           <Text style={styles.brandBlue}>H</Text>
           <Text style={styles.brandRed}>a</Text>
@@ -112,9 +181,9 @@ export default function HomeScreen() {
           <Text style={styles.brandMuted}> Widget</Text>
         </Text>
         <Link href="/menu" asChild>
-          <View style={styles.addButton}>
+          <Pressable style={styles.addButton}>
             <Ionicons name="add-outline" size={24} color="#FFFFFF" />
-          </View>
+          </Pressable>
         </Link>
       </View>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -132,6 +201,13 @@ export default function HomeScreen() {
 
         {habits.map((habit) => {
           const isDoneToday = habit.lastCompletedDate === todayKey;
+          const isDueToday = isDueDate(habit, parseDateKey(todayKey));
+          const meta =
+            habit.track === 'Amount'
+              ? ` (${Number.isFinite(Number(habit.amount)) ? habit.amount : 0} times)`
+              : habit.track === 'Time'
+                ? ` (${Number.isFinite(Number(habit.time)) ? habit.time : 0} minute)`
+                : '';
           return (
             <View key={habit.id} style={styles.habitCard}>
               <Link href={{ pathname: '/edit/[id]', params: { id: habit.id } }} asChild>
@@ -148,7 +224,10 @@ export default function HomeScreen() {
                     )}
                   </View>
                   <View style={styles.habitInfo}>
-                    <Text style={styles.habitTitle}>{habit.name}</Text>
+                    <Text style={styles.habitTitle}>
+                      {habit.name}
+                      {meta}
+                    </Text>
                     <View style={styles.habitStreakRow}>
                       <View style={styles.streakInfo}>
                         <Ionicons name="flame-outline" size={20} color="#FBBC05" />
@@ -158,7 +237,11 @@ export default function HomeScreen() {
                   </View>
                 </Pressable>
               </Link>
-              <CheckCircle done={isDoneToday} onPress={() => toggleDone(habit.id)} />
+              <CheckCircle
+                done={isDoneToday}
+                onPress={isDueToday ? () => toggleDone(habit.id) : undefined}
+              />
+              {!isDueToday && <Text style={styles.notDueText}>Not due</Text>}
             </View>
           );
         })}
@@ -222,7 +305,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   countNumber: {
-    fontSize: 96,
+    fontSize: 60,
     color: '#5E636A',
     fontWeight: '400',
   },
@@ -304,7 +387,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
   },
+  checkCircleDisabled: {
+    borderColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: '#F2F4F7',
+  },
   checkCircleDone: {
     backgroundColor: '#34A853',
+  },
+  notDueText: {
+    fontSize: 10,
+    color: '#5E636A',
+    fontWeight: '600',
   },
 });

@@ -19,6 +19,7 @@ This repository uses Codex-style agent collaboration. These notes keep changes c
 - Match Figma spacing and sizes as closely as possible.
 - Avoid Tailwind; use `StyleSheet`.
 - Favor `Ionicons` outline icons instead of external SVGs.
+- If a Figma design includes any SVG icon, replace it with an equivalent `Ionicons` outline icon.
 - Use consistent colors:
   - Blue `#4285F4`
   - Red `#EA4335`
@@ -42,4 +43,3 @@ This repository uses Codex-style agent collaboration. These notes keep changes c
 - Never delete unrelated files or revert user changes.
 - Keep edits minimal and scoped.
 - If unsure about a UX flow, implement the safest version and call it out.
-

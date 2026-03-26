@@ -2,13 +2,13 @@ import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 
@@ -63,7 +63,7 @@ export default function EmojiMenuScreen() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <View style={styles.scrollContent}>
         <View style={styles.habitIconWrap}>
           {selectedIcon ? (
             <Ionicons name={selectedIcon as keyof typeof Ionicons.glyphMap} size={44} color="#1F1F1F" />
@@ -84,7 +84,12 @@ export default function EmojiMenuScreen() {
             <Ionicons name="search-outline" size={16} color="#5E636A" />
           </View>
 
-          <ScrollView contentContainerStyle={styles.gridContainer} showsVerticalScrollIndicator={false}>
+          <ScrollView
+            style={styles.gridScroll}
+            contentContainerStyle={styles.gridContainer}
+            showsVerticalScrollIndicator={false}
+            nestedScrollEnabled={true}
+          >
             {filteredEmojis.map((emoji, index) => {
               const isSelected = selectedIcon === emoji;
               return (
@@ -99,7 +104,7 @@ export default function EmojiMenuScreen() {
             })}
           </ScrollView>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -129,10 +134,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   scrollContent: {
+    flex: 1,
     paddingHorizontal: 20,
-    paddingVertical: 40,
+    paddingVertical: 20,
     gap: 20,
     alignItems: 'center',
+  },
+  gridScroll: {
+    maxHeight: 480,
+    width: '100%',
   },
   habitIconWrap: {
     backgroundColor: '#FBBC05',
@@ -172,7 +182,6 @@ const styles = StyleSheet.create({
     color: '#5E636A',
   },
   gridContainer: {
-    maxHeight: 520,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 10,
