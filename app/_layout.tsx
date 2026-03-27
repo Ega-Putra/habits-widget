@@ -20,7 +20,7 @@ export default function RootLayout() {
         <Stack.Screen name="emoji-menu" options={{ headerShown: false }} />
         <Stack.Screen name="option" options={{ headerShown: false }} />
         <Stack.Screen name="edit/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="widget-preview" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
