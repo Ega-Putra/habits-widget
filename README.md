@@ -1,50 +1,52 @@
-# Welcome to your Expo app 👋
+<p align="center">
+  <img src="assets/images/image.png" width="120" alt="Habits Widget Logo">
+</p>
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+# Habits Widget
 
-## Get started
+**A friendly habit tracker with a clean UI and Android home screen widgets.**
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## Preview
 
-2. Start the app
+<p align="center">
+  <img src="assets/preview/screenshot1.png" width="45%" alt="App View">
+  <img src="assets/preview/screenshot2.png" width="45%" alt="Widget View">
+</p>
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## Why I built this
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+I wanted a simple habit tracker that feels lightweight, stays out of the way, and still keeps me accountable. The result is **Habits Widget** — a clean habit manager with quick create/edit flows and an Android widget for at‑a‑glance progress.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## What it can do
 
-When you're ready, run:
+- **Track habits** with daily, weekly, or monthly schedules.
+- **Streaks** that update when you complete a habit.
+- **Emoji icons** to make your habits feel personal.
+- **Android home screen widget** synced with the app.
+- **Offline‑first** storage using AsyncStorage.
 
-```bash
-npm run reset-project
-```
+---
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## How to run
 
-## Learn more
+* **On Android:** Download the latest APK from [Releases](https://github.com/egaputra/habit-widget/releases)
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Under the hood
 
-## Join the community
+- **Expo + React Native**
+- **Expo Router**
+- **AsyncStorage** for persistence
+- **react-native-android-widget** for widgets
+- **Ionicons** for iconography
 
-Join our community of developers creating universal apps.
+---
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+*Made with care by [Ega Putra](https://github.com/egaputra)*

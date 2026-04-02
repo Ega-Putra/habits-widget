@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
@@ -213,6 +213,69 @@ export default function MenuScreen() {
     }
   }, [emoji]);
 
+  useEffect(() => {
+    const loadDraft = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('habitDraft');
+        if (!stored) {
+          return;
+        }
+        const draft = JSON.parse(stored);
+        setHabitName(draft.habitName ?? '');
+        setDescription(draft.description ?? '');
+        setColor(draft.color ?? COLORS[2]);
+        if (!(typeof emoji === 'string' && emoji.length)) {
+          setSelectedEmoji(draft.selectedEmoji ?? null);
+        }
+        setTrack((draft.track as TrackType) ?? 'Task');
+        setRepeat((draft.repeat as RepeatType) ?? 'Daily');
+        setDays(Array.isArray(draft.days) && draft.days.length ? draft.days : DAYS);
+        setMonthDays(
+          Array.isArray(draft.monthDays) && draft.monthDays.length ? draft.monthDays : ['1'],
+        );
+        setAmountValue(Number.isFinite(Number(draft.amountValue)) ? Number(draft.amountValue) : 1);
+        setTimeValue(Number.isFinite(Number(draft.timeValue)) ? Number(draft.timeValue) : 0);
+      } catch (error) {
+        console.error('Failed to load draft', error);
+      }
+    };
+    loadDraft();
+  }, []);
+
+  useEffect(() => {
+    const saveDraft = async () => {
+      try {
+        const draft = {
+          habitName,
+          description,
+          color,
+          selectedEmoji,
+          track,
+          repeat,
+          days,
+          monthDays,
+          amountValue,
+          timeValue,
+        };
+        await AsyncStorage.setItem('habitDraft', JSON.stringify(draft));
+      } catch (error) {
+        console.error('Failed to save draft', error);
+      }
+    };
+    saveDraft();
+  }, [
+    habitName,
+    description,
+    color,
+    selectedEmoji,
+    track,
+    repeat,
+    days,
+    monthDays,
+    amountValue,
+    timeValue,
+  ]);
+
   const handleCreate = async () => {
     if (!habitName.trim() || isSaving) {
       return;
@@ -237,6 +300,7 @@ export default function MenuScreen() {
       const habits = existing ? JSON.parse(existing) : [];
       habits.push(payload);
       await AsyncStorage.setItem('habits', JSON.stringify(habits));
+      await AsyncStorage.removeItem('habitDraft');
       router.replace('/');
     } catch (error) {
       console.error('Failed to save habit', error);
@@ -248,9 +312,14 @@ export default function MenuScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.navbar}>
-        <Link href="/" asChild>
+        <Pressable
+          onPress={async () => {
+            await AsyncStorage.removeItem('habitDraft');
+            router.replace('/');
+          }}
+        >
           <Ionicons name="close-outline" size={32} color="#1F1F1F" />
-        </Link>
+        </Pressable>
         <Pressable
           style={[styles.createBadge, !habitName.trim() && styles.createBadgeDisabled]}
           onPress={handleCreate}
